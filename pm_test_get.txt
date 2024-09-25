@@ -1,0 +1,100 @@
+//=======1 Получаем id PartyRole=========
+let jsonDataEtlParty = JSON.parse(responseBody);
+
+//получаем id PartyRole
+let partyRoleId = jsonDataEtlParty.data.uuid;
+
+//получаем id ETL domain PartyRole
+let etlPartyRoleId = jsonDataEtlParty.data.eii;
+
+//=======2 Получаем тело PartyRole и тело Individual=========
+//получаем party role
+const getRequestPartyRoleId = {
+  url: pm.collectionVariables.get("HostPartyRole")+':'+pm.collectionVariables.get("PortPartyRole")+'/ucp/0001/plain/party_role/id/'+partyRoleId,
+  method: 'GET',
+  header: {
+    'Content-Type': 'application/json',
+    'Bauth-token': pm.collectionVariables.get("TokenForPartyRole")
+  }
+};
+pm.sendRequest(getRequestPartyRoleId, (error, responseparty) => {
+  console.log(error ? error : responseparty.json());
+  let jsonDataParty = responseparty.json();
+  let partyGrId = jsonDataParty.data.idGr;
+  let individualId = jsonDataParty.data.engagedParty.id;
+  pm.test(`PartyRole OK, id - ${partyRoleId}, IdGr - ${partyGrId}, ETL domain - ${etlPartyRoleId}`, () => {
+    pm.expect(error).to.equal(null);
+    pm.expect(jsonDataParty.status.code).to.equal(200);
+  });
+
+  //Получаем тело Individual
+  const getRequestIndivId = {
+    url: pm.collectionVariables.get("HostIndividual")+':'+pm.collectionVariables.get("PortIndividual")+'/ucp/0001/plain/individual/id/'+individualId,
+    method: 'GET',
+    header: {
+        'Content-Type': 'application/json',
+        'Bauth-token': pm.collectionVariables.get("TokenForIndividual")
+    }
+    };
+    pm.sendRequest(getRequestIndivId, (error, responseind) => {
+        console.log(error ? error : responseind.json());
+        let jsonDataInd = responseind.json().data;
+        let indGrId = jsonDataInd.idGr;
+        let jsonExtDataInd = jsonDataInd.externalIdentifier;
+        let etlIndivId = 'Individual@' + jsonExtDataInd.externalSystemId + 
+                            '@' + jsonExtDataInd.referredType + 
+                            '@' + jsonExtDataInd.entityId;
+        pm.test(`Individual OK, id - ${individualId}, IdGr - ${indGrId}, ETL domain - ${etlIndivId}`, () => {
+            pm.expect(error).to.equal(null);
+            pm.expect(responseind.json().status.code).to.equal(200);
+        });
+    });
+});
+
+//=======3 Получаем тело Agreement=========
+const getRequestAgreemId = {
+    url: pm.collectionVariables.get("HostAgreement")+':'+pm.collectionVariables.get("PortAgreement")+'/ucp/0001/plain/agreement/engagedParty[*].id/'+partyRoleId,
+    method: 'GET',
+    header: {
+        'Content-Type': 'application/json',
+        'Bauth-token': pm.collectionVariables.get("TokenForAgreement")
+    }
+};
+pm.sendRequest(getRequestAgreemId, (error, responseagr) => {
+    console.log(error ? error : responseagr.json());
+    let arrAgreements = responseagr.json().data;
+    arrAgreements.forEach(function(item, i){
+        let jsonExtDataAgr = item.externalIdentifier;
+        let etlAgrId = 'Agreement@' + jsonExtDataAgr.externalSystemId + 
+                            '@' + jsonExtDataAgr.referredType + 
+                            '@' + jsonExtDataAgr.entityId;
+        pm.test(`Agreement ${i+1} OK, id - ${item.id}, ETL domain - ${etlAgrId}`, () => {
+        pm.expect(error).to.equal(null);
+        pm.expect(responseagr.json().status.code).to.equal(200);
+        });
+    });
+});
+
+//=======4 Получаем тело Product=========
+const getRequestProductId = {
+    url: pm.collectionVariables.get("HostProduct")+':'+pm.collectionVariables.get("PortProduct")+'/ucp/0001/plain/product/relatedParty[*].id/'+partyRoleId,
+    method: 'GET',
+    header: {
+        'Content-Type': 'application/json',
+        'Bauth-token': pm.collectionVariables.get("TokenForProduct")
+    }
+};
+pm.sendRequest(getRequestProductId, (error, responsepr) => {
+    console.log(error ? error : responsepr.json());
+    let arrProducts = responsepr.json().data;
+    arrProducts.forEach(function(item, i){
+        let jsonExtDataProd = item.externalIdentifier;
+        let etlProdId = 'Product@' + jsonExtDataProd.externalSystemId + 
+                            '@' + jsonExtDataProd.referredType + 
+                            '@' + jsonExtDataProd.entityId;
+        pm.test(`Product ${i+1} OK, id - ${item.id}, ETL domain - ${etlProdId}`, () => {
+        pm.expect(error).to.equal(null);
+        pm.expect(responsepr.json().status.code).to.equal(200);
+        });
+    });   
+});

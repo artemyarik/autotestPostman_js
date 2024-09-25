@@ -1,0 +1,137 @@
+//=======1 Получаем id PartyRole=========
+let jsonDataEtlParty = JSON.parse(responseBody);
+
+//получаем id PartyRole
+let partyRoleId = jsonDataEtlParty.data.uuid;
+//получаем id ETL domain PartyRole
+let etlPartyRoleId = jsonDataEtlParty.data.eii;
+
+const delETLDomain = (etlKey) => objEtlDom = {
+        url: pm.collectionVariables.get("HostEtl")+':'+pm.collectionVariables.get("PortEtl")+'/ucp/0001/plain/etl_domain_km/eii/'+etlKey,
+        method: 'DELETE',
+        header: {
+            'Content-Type': 'application/json',
+            'Bauth-token': pm.collectionVariables.get("TokenForEtl")
+        }
+};
+
+//=======2 Удаляем тело PartyRole и тело Individual=========
+//Удаляем party role
+const delRequestPartyRoleId = {
+  url: pm.collectionVariables.get("HostPartyRole")+':'+pm.collectionVariables.get("PortPartyRole")+'/ucp/0001/plain/party_role/id/'+partyRoleId,
+  method: 'DELETE',
+  header: {
+    'Content-Type': 'application/json',
+    'Bauth-token': pm.collectionVariables.get("TokenForPartyRole")
+  }
+};
+pm.sendRequest(delRequestPartyRoleId, (error, responseparty) => {
+  console.log(error ? error : responseparty.json());
+  let jsonDataParty = responseparty.json();
+  let partyGrId = jsonDataParty.data.idGr;
+  let individualId = jsonDataParty.data.engagedParty.id;
+  pm.test(`Удален PartyRole, id - ${partyRoleId}, IdGr - ${partyGrId}`, () => {
+    pm.expect(error).to.equal(null);
+    pm.expect(jsonDataParty.status.code).to.equal(200);
+  });
+
+  //Удаляем тело Individual
+    const delRequestIndivId = {
+        url: pm.collectionVariables.get("HostIndividual")+':'+pm.collectionVariables.get("PortIndividual")+'/ucp/0001/plain/individual/id/'+individualId,
+        method: 'DELETE',
+        header: {
+            'Content-Type': 'application/json',
+            'Bauth-token': pm.collectionVariables.get("TokenForIndividual")
+        }
+    };
+    pm.sendRequest(delRequestIndivId, (error, responseind) => {
+        console.log(error ? error : responseind.json());
+        let jsonDataInd = responseind.json().data;
+        let indGrId = jsonDataInd.idGr;
+        let jsonExtDataInd = jsonDataInd.externalIdentifier;
+        let etlIndivId = 'Individual@' + jsonExtDataInd.externalSystemId + 
+                            '@' + jsonExtDataInd.referredType + 
+                            '@' + jsonExtDataInd.entityId;
+        pm.test(`Удален Individual, id - ${individualId}, IdGr - ${indGrId}`, () => {
+            pm.expect(error).to.equal(null);
+            pm.expect(responseind.json().status.code).to.equal(200);
+        });
+        //Получаем etldomain Individual
+        pm.sendRequest(delETLDomain(etlIndivId), (error, responseEtlind) => {
+            console.log(error ? error : responseEtlind.json());
+            pm.test(`ETL Individual delete - ${etlIndivId}`, () => {
+                pm.expect(error).to.equal(null);
+                pm.expect(responseEtlind.json().status.code).to.equal(200);
+            });
+            pm.test(`ETL PartyRole delete - ${etlPartyRoleId}`, () => {
+                pm.expect(error).to.equal(null);
+                pm.expect(responseparty.json().status.code).to.equal(200);
+            });
+        });
+    });
+});
+
+//=======3 Удаляем тело Agreement=========
+const delRequestAgreemId = {
+    url: pm.collectionVariables.get("HostAgreement")+':'+pm.collectionVariables.get("PortAgreement")+'/ucp/0001/plain/agreement/engagedParty[*].id/'+partyRoleId,
+    method: 'DELETE',
+    header: {
+        'Content-Type': 'application/json',
+        'Bauth-token': pm.collectionVariables.get("TokenForAgreement")
+    }
+};
+pm.sendRequest(delRequestAgreemId, (error, responseagr) => {
+    console.log(error ? error : responseagr.json());
+    let arrAgreements = responseagr.json().data;
+    arrAgreements.forEach(function(item, i){
+        let jsonExtDataAgr = item.externalIdentifier;
+        let etlAgrId = 'Agreement@' + jsonExtDataAgr.externalSystemId + 
+                            '@' + jsonExtDataAgr.referredType + 
+                            '@' + jsonExtDataAgr.entityId;
+        pm.test(`Удален Agreement ${i+1} OK, id - ${item.id}`, () => {
+            pm.expect(error).to.equal(null);
+            pm.expect(responseagr.json().status.code).to.equal(200);
+        });
+
+        //Удаляем etldomain Agreement
+        pm.sendRequest(delETLDomain(etlAgrId), (error, responseEtlagr) => {
+            console.log(error ? error : responseEtlagr.json());
+            pm.test(`ETL Agreement delete - ${etlAgrId}`, () => {
+                pm.expect(error).to.equal(null);
+                pm.expect(responseEtlagr.json().status.code).to.equal(200);
+            });
+        });
+    });
+});
+
+//=======4 Удаляем тело Product=========
+const delRequestProductId = {
+    url: pm.collectionVariables.get("HostProduct")+':'+pm.collectionVariables.get("PortProduct")+'/ucp/0001/plain/product/relatedParty[*].id/'+partyRoleId,
+    method: 'DELETE',
+    header: {
+        'Content-Type': 'application/json',
+        'Bauth-token': pm.collectionVariables.get("TokenForProduct")
+    }
+};
+pm.sendRequest(delRequestProductId, (error, responsepr) => {
+    console.log(error ? error : responsepr.json());
+    let arrProducts = responsepr.json().data;
+    arrProducts.forEach(function(item, i){
+        let jsonExtDataProd = item.externalIdentifier;
+        let etlProdId = 'Product@' + jsonExtDataProd.externalSystemId + 
+                            '@' + jsonExtDataProd.referredType + 
+                            '@' + jsonExtDataProd.entityId;
+        pm.test(`Удален Product ${i+1}, id - ${item.id}`, () => {
+        pm.expect(error).to.equal(null);
+        pm.expect(responsepr.json().status.code).to.equal(200);
+        });
+        //Удаляем etldomain Product
+        pm.sendRequest(delETLDomain(etlProdId), (error, responseEtlprod) => {
+            console.log(error ? error : responseEtlprod.json());
+            pm.test(`ETL Product ${i+1} delete - ${etlProdId}`, () => {
+                pm.expect(error).to.equal(null);
+                pm.expect(responseEtlprod.json().status.code).to.equal(200);
+            });
+        });
+    });   
+});
