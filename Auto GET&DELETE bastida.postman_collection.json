@@ -1,0 +1,525 @@
+{
+	"info": {
+		"_postman_id": "7332448c-01e0-4eee-9f07-a5c56a79e1da",
+		"name": "Auto GET&DELETE bastida",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "delete etl+bastida full",
+			"item": [
+				{
+					"name": "Получение по etl полного обвяза",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"//=======1 Получаем id PartyRole=========\r",
+									"let jsonDataEtlParty = JSON.parse(responseBody);\r",
+									"\r",
+									"//получаем id PartyRole\r",
+									"let partyRoleId = jsonDataEtlParty.data.uuid;\r",
+									"\r",
+									"//получаем id ETL domain PartyRole\r",
+									"let etlPartyRoleId = jsonDataEtlParty.data.eii;\r",
+									"\r",
+									"//=======2 Получаем тело PartyRole и тело Individual=========\r",
+									"//получаем party role\r",
+									"const getRequestPartyRoleId = {\r",
+									"  url: pm.collectionVariables.get(\"HostPartyRole\")+':'+pm.collectionVariables.get(\"PortPartyRole\")+'/ucp/0001/plain/party_role/id/'+partyRoleId,\r",
+									"  method: 'GET',\r",
+									"  header: {\r",
+									"    'Content-Type': 'application/json',\r",
+									"    'Bauth-token': pm.collectionVariables.get(\"TokenForPartyRole\")\r",
+									"  }\r",
+									"};\r",
+									"pm.sendRequest(getRequestPartyRoleId, (error, responseparty) => {\r",
+									"  console.log(error ? error : responseparty.json());\r",
+									"  let jsonDataParty = responseparty.json();\r",
+									"  let partyGrId = jsonDataParty.data.idGr;\r",
+									"  let individualId = jsonDataParty.data.engagedParty.id;\r",
+									"  pm.test(`PartyRole OK, id - ${partyRoleId}, IdGr - ${partyGrId}, ETL domain - ${etlPartyRoleId}`, () => {\r",
+									"    pm.expect(error).to.equal(null);\r",
+									"    pm.expect(jsonDataParty.status.code).to.equal(200);\r",
+									"  });\r",
+									"\r",
+									"  //Получаем тело Individual\r",
+									"  const getRequestIndivId = {\r",
+									"    url: pm.collectionVariables.get(\"HostIndividual\")+':'+pm.collectionVariables.get(\"PortIndividual\")+'/ucp/0001/plain/individual/id/'+individualId,\r",
+									"    method: 'GET',\r",
+									"    header: {\r",
+									"        'Content-Type': 'application/json',\r",
+									"        'Bauth-token': pm.collectionVariables.get(\"TokenForIndividual\")\r",
+									"    }\r",
+									"    };\r",
+									"    pm.sendRequest(getRequestIndivId, (error, responseind) => {\r",
+									"        console.log(error ? error : responseind.json());\r",
+									"        let jsonDataInd = responseind.json().data;\r",
+									"        let indGrId = jsonDataInd.idGr;\r",
+									"        let jsonExtDataInd = jsonDataInd.externalIdentifier;\r",
+									"        let etlIndivId = 'Individual@' + jsonExtDataInd.externalSystemId + \r",
+									"                            '@' + jsonExtDataInd.referredType + \r",
+									"                            '@' + jsonExtDataInd.entityId;\r",
+									"        pm.test(`Individual OK, id - ${individualId}, IdGr - ${indGrId}, ETL domain - ${etlIndivId}`, () => {\r",
+									"            pm.expect(error).to.equal(null);\r",
+									"            pm.expect(responseind.json().status.code).to.equal(200);\r",
+									"        });\r",
+									"    });\r",
+									"});\r",
+									"\r",
+									"//=======3 Получаем тело Agreement=========\r",
+									"const getRequestAgreemId = {\r",
+									"    url: pm.collectionVariables.get(\"HostAgreement\")+':'+pm.collectionVariables.get(\"PortAgreement\")+'/ucp/0001/plain/agreement/engagedParty[*].id/'+partyRoleId,\r",
+									"    method: 'GET',\r",
+									"    header: {\r",
+									"        'Content-Type': 'application/json',\r",
+									"        'Bauth-token': pm.collectionVariables.get(\"TokenForAgreement\")\r",
+									"    }\r",
+									"};\r",
+									"pm.sendRequest(getRequestAgreemId, (error, responseagr) => {\r",
+									"    console.log(error ? error : responseagr.json());\r",
+									"    let arrAgreements = responseagr.json().data;\r",
+									"    arrAgreements.forEach(function(item, i){\r",
+									"        let jsonExtDataAgr = item.externalIdentifier;\r",
+									"        let etlAgrId = 'Agreement@' + jsonExtDataAgr.externalSystemId + \r",
+									"                            '@' + jsonExtDataAgr.referredType + \r",
+									"                            '@' + jsonExtDataAgr.entityId;\r",
+									"        pm.test(`Agreement ${i+1} OK, id - ${item.id}, ETL domain - ${etlAgrId}`, () => {\r",
+									"        pm.expect(error).to.equal(null);\r",
+									"        pm.expect(responseagr.json().status.code).to.equal(200);\r",
+									"        });\r",
+									"    });\r",
+									"});\r",
+									"\r",
+									"//=======4 Получаем тело Product=========\r",
+									"const getRequestProductId = {\r",
+									"    url: pm.collectionVariables.get(\"HostProduct\")+':'+pm.collectionVariables.get(\"PortProduct\")+'/ucp/0001/plain/product/relatedParty[*].id/'+partyRoleId,\r",
+									"    method: 'GET',\r",
+									"    header: {\r",
+									"        'Content-Type': 'application/json',\r",
+									"        'Bauth-token': pm.collectionVariables.get(\"TokenForProduct\")\r",
+									"    }\r",
+									"};\r",
+									"pm.sendRequest(getRequestProductId, (error, responsepr) => {\r",
+									"    console.log(error ? error : responsepr.json());\r",
+									"    let arrProducts = responsepr.json().data;\r",
+									"    arrProducts.forEach(function(item, i){\r",
+									"        let jsonExtDataProd = item.externalIdentifier;\r",
+									"        let etlProdId = 'Product@' + jsonExtDataProd.externalSystemId + \r",
+									"                            '@' + jsonExtDataProd.referredType + \r",
+									"                            '@' + jsonExtDataProd.entityId;\r",
+									"        pm.test(`Product ${i+1} OK, id - ${item.id}, ETL domain - ${etlProdId}`, () => {\r",
+									"        pm.expect(error).to.equal(null);\r",
+									"        pm.expect(responsepr.json().status.code).to.equal(200);\r",
+									"        });\r",
+									"    });   \r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{HostEtl}}:{{PortEtl}}/ucp/0001/plain/etl_domain_km/eii/PartyRole@INAC@customer@10104610",
+							"host": [
+								"{{HostEtl}}"
+							],
+							"port": "{{PortEtl}}",
+							"path": [
+								"ucp",
+								"0001",
+								"plain",
+								"etl_domain_km",
+								"eii",
+								"PartyRole@INAC@customer@10104610"
+							],
+							"query": [
+								{
+									"key": "skip",
+									"value": "1000",
+									"disabled": true
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Удаление по etl полного обвяза",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"//=======1 Получаем id PartyRole=========\r",
+									"let jsonDataEtlParty = JSON.parse(responseBody);\r",
+									"\r",
+									"//получаем id PartyRole\r",
+									"let partyRoleId = jsonDataEtlParty.data.uuid;\r",
+									"//получаем id ETL domain PartyRole\r",
+									"let etlPartyRoleId = jsonDataEtlParty.data.eii;\r",
+									"\r",
+									"const delETLDomain = (etlKey) => objEtlDom = {\r",
+									"        url: pm.collectionVariables.get(\"HostEtl\")+':'+pm.collectionVariables.get(\"PortEtl\")+'/ucp/0001/plain/etl_domain_km/eii/'+etlKey,\r",
+									"        method: 'DELETE',\r",
+									"        header: {\r",
+									"            'Content-Type': 'application/json',\r",
+									"            'Bauth-token': pm.collectionVariables.get(\"TokenForEtl\")\r",
+									"        }\r",
+									"};\r",
+									"\r",
+									"//=======2 Удаляем тело PartyRole и тело Individual=========\r",
+									"//Удаляем party role\r",
+									"const delRequestPartyRoleId = {\r",
+									"  url: pm.collectionVariables.get(\"HostPartyRole\")+':'+pm.collectionVariables.get(\"PortPartyRole\")+'/ucp/0001/plain/party_role/id/'+partyRoleId,\r",
+									"  method: 'DELETE',\r",
+									"  header: {\r",
+									"    'Content-Type': 'application/json',\r",
+									"    'Bauth-token': pm.collectionVariables.get(\"TokenForPartyRole\")\r",
+									"  }\r",
+									"};\r",
+									"pm.sendRequest(delRequestPartyRoleId, (error, responseparty) => {\r",
+									"  console.log(error ? error : responseparty.json());\r",
+									"  let jsonDataParty = responseparty.json();\r",
+									"  let partyGrId = jsonDataParty.data.idGr;\r",
+									"  let individualId = jsonDataParty.data.engagedParty.id;\r",
+									"  pm.test(`Удален PartyRole, id - ${partyRoleId}, IdGr - ${partyGrId}`, () => {\r",
+									"    pm.expect(error).to.equal(null);\r",
+									"    pm.expect(jsonDataParty.status.code).to.equal(200);\r",
+									"  });\r",
+									"\r",
+									"  //Удаляем тело Individual\r",
+									"    const delRequestIndivId = {\r",
+									"        url: pm.collectionVariables.get(\"HostIndividual\")+':'+pm.collectionVariables.get(\"PortIndividual\")+'/ucp/0001/plain/individual/id/'+individualId,\r",
+									"        method: 'DELETE',\r",
+									"        header: {\r",
+									"            'Content-Type': 'application/json',\r",
+									"            'Bauth-token': pm.collectionVariables.get(\"TokenForIndividual\")\r",
+									"        }\r",
+									"    };\r",
+									"    pm.sendRequest(delRequestIndivId, (error, responseind) => {\r",
+									"        console.log(error ? error : responseind.json());\r",
+									"        let jsonDataInd = responseind.json().data;\r",
+									"        let indGrId = jsonDataInd.idGr;\r",
+									"        let jsonExtDataInd = jsonDataInd.externalIdentifier;\r",
+									"        let etlIndivId = 'Individual@' + jsonExtDataInd.externalSystemId + \r",
+									"                            '@' + jsonExtDataInd.referredType + \r",
+									"                            '@' + jsonExtDataInd.entityId;\r",
+									"        pm.test(`Удален Individual, id - ${individualId}, IdGr - ${indGrId}`, () => {\r",
+									"            pm.expect(error).to.equal(null);\r",
+									"            pm.expect(responseind.json().status.code).to.equal(200);\r",
+									"        });\r",
+									"        //Получаем etldomain Individual\r",
+									"        pm.sendRequest(delETLDomain(etlIndivId), (error, responseEtlind) => {\r",
+									"            console.log(error ? error : responseEtlind.json());\r",
+									"            pm.test(`ETL Individual delete - ${etlIndivId}`, () => {\r",
+									"                pm.expect(error).to.equal(null);\r",
+									"                pm.expect(responseEtlind.json().status.code).to.equal(200);\r",
+									"            });\r",
+									"            pm.test(`ETL PartyRole delete - ${etlPartyRoleId}`, () => {\r",
+									"                pm.expect(error).to.equal(null);\r",
+									"                pm.expect(responseparty.json().status.code).to.equal(200);\r",
+									"            });\r",
+									"        });\r",
+									"    });\r",
+									"});\r",
+									"\r",
+									"//=======3 Удаляем тело Agreement=========\r",
+									"const delRequestAgreemId = {\r",
+									"    url: pm.collectionVariables.get(\"HostAgreement\")+':'+pm.collectionVariables.get(\"PortAgreement\")+'/ucp/0001/plain/agreement/engagedParty[*].id/'+partyRoleId,\r",
+									"    method: 'DELETE',\r",
+									"    header: {\r",
+									"        'Content-Type': 'application/json',\r",
+									"        'Bauth-token': pm.collectionVariables.get(\"TokenForAgreement\")\r",
+									"    }\r",
+									"};\r",
+									"pm.sendRequest(delRequestAgreemId, (error, responseagr) => {\r",
+									"    console.log(error ? error : responseagr.json());\r",
+									"    let arrAgreements = responseagr.json().data;\r",
+									"    arrAgreements.forEach(function(item, i){\r",
+									"        let jsonExtDataAgr = item.externalIdentifier;\r",
+									"        let etlAgrId = 'Agreement@' + jsonExtDataAgr.externalSystemId + \r",
+									"                            '@' + jsonExtDataAgr.referredType + \r",
+									"                            '@' + jsonExtDataAgr.entityId;\r",
+									"        pm.test(`Удален Agreement ${i+1} OK, id - ${item.id}`, () => {\r",
+									"            pm.expect(error).to.equal(null);\r",
+									"            pm.expect(responseagr.json().status.code).to.equal(200);\r",
+									"        });\r",
+									"\r",
+									"        //Удаляем etldomain Agreement\r",
+									"        pm.sendRequest(delETLDomain(etlAgrId), (error, responseEtlagr) => {\r",
+									"            console.log(error ? error : responseEtlagr.json());\r",
+									"            pm.test(`ETL Agreement delete - ${etlAgrId}`, () => {\r",
+									"                pm.expect(error).to.equal(null);\r",
+									"                pm.expect(responseEtlagr.json().status.code).to.equal(200);\r",
+									"            });\r",
+									"        });\r",
+									"    });\r",
+									"});\r",
+									"\r",
+									"//=======4 Удаляем тело Product=========\r",
+									"const delRequestProductId = {\r",
+									"    url: pm.collectionVariables.get(\"HostProduct\")+':'+pm.collectionVariables.get(\"PortProduct\")+'/ucp/0001/plain/product/relatedParty[*].id/'+partyRoleId,\r",
+									"    method: 'DELETE',\r",
+									"    header: {\r",
+									"        'Content-Type': 'application/json',\r",
+									"        'Bauth-token': pm.collectionVariables.get(\"TokenForProduct\")\r",
+									"    }\r",
+									"};\r",
+									"pm.sendRequest(delRequestProductId, (error, responsepr) => {\r",
+									"    console.log(error ? error : responsepr.json());\r",
+									"    let arrProducts = responsepr.json().data;\r",
+									"    arrProducts.forEach(function(item, i){\r",
+									"        let jsonExtDataProd = item.externalIdentifier;\r",
+									"        let etlProdId = 'Product@' + jsonExtDataProd.externalSystemId + \r",
+									"                            '@' + jsonExtDataProd.referredType + \r",
+									"                            '@' + jsonExtDataProd.entityId;\r",
+									"        pm.test(`Удален Product ${i+1}, id - ${item.id}`, () => {\r",
+									"        pm.expect(error).to.equal(null);\r",
+									"        pm.expect(responsepr.json().status.code).to.equal(200);\r",
+									"        });\r",
+									"        //Удаляем etldomain Product\r",
+									"        pm.sendRequest(delETLDomain(etlProdId), (error, responseEtlprod) => {\r",
+									"            console.log(error ? error : responseEtlprod.json());\r",
+									"            pm.test(`ETL Product ${i+1} delete - ${etlProdId}`, () => {\r",
+									"                pm.expect(error).to.equal(null);\r",
+									"                pm.expect(responseEtlprod.json().status.code).to.equal(200);\r",
+									"            });\r",
+									"        });\r",
+									"    });   \r",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{HostEtl}}:{{PortEtl}}/ucp/0001/plain/etl_domain_km/eii/PartyRole@INAC@customer@10120868",
+							"host": [
+								"{{HostEtl}}"
+							],
+							"port": "{{PortEtl}}",
+							"path": [
+								"ucp",
+								"0001",
+								"plain",
+								"etl_domain_km",
+								"eii",
+								"PartyRole@INAC@customer@10120868"
+							],
+							"query": [
+								{
+									"key": "skip",
+									"value": "1000",
+									"disabled": true
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"auth": {
+				"type": "apikey",
+				"apikey": [
+					{
+						"key": "value",
+						"value": "{{TokenForEtl}}",
+						"type": "string"
+					},
+					{
+						"key": "key",
+						"value": "Bauth-token",
+						"type": "string"
+					}
+				]
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.collectionVariables.get(\"TokenForEtl\");",
+							"pm.sendRequest({",
+							"        method: \"POST\",",
+							"        url: pm.collectionVariables.get(\"HostEtl\")+\":\"+pm.collectionVariables.get(\"PortEtl\")+\"/bauth/login?login=\"+pm.collectionVariables.get(\"LoginSuccess\")+\"&password=\"+pm.collectionVariables.get(\"PasswordEtl\")+\"&sys=\"+pm.collectionVariables.get(\"SysSuccess\")",
+							"}, function (err, response) {",
+							"    if(!err){",
+							"        pm.collectionVariables.set(\"TokenForEtl\", response.json().token)",
+							"    };",
+							"});"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"if(pm.response.code == 403){",
+							"    pm.sendRequest({",
+							"        method: \"POST\",",
+							"        url: pm.collectionVariables.get(\"HostEtl\")+\":\"+pm.collectionVariables.get(\"PortEtl\")+\"/bauth/login?login=\"+pm.collectionVariables.get(\"LoginSuccess\")+\"&password=\"+pm.collectionVariables.get(\"PasswordEtl\")+\"&sys=\"+pm.collectionVariables.get(\"SysSuccess\")",
+							"}, function (err, response) {",
+							"    if(!err){",
+							"        pm.collectionVariables.set(\"TokenForEtl\", response.json().token)",
+							"    };",
+							"})}"
+						]
+					}
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "inherit"
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "Host",
+			"value": "http://yd-http://ucp2testtar01-1.client-profile-test.cloud.vimpelcom.ru"
+		},
+		{
+			"key": "HostProduct",
+			"value": "https://cp-tar-pp-product.vimpelcom.ru"
+		},
+		{
+			"key": "HostService",
+			"value": "https://cp-tar-pp-service.vimpelcom.ru"
+		},
+		{
+			"key": "HostIndividual",
+			"value": "https://cp-tar-pp-ind.vimpelcom.ru"
+		},
+		{
+			"key": "HostPartyRole",
+			"value": "https://cp-tar-pp-pr.vimpelcom.ru"
+		},
+		{
+			"key": "HostAgreement",
+			"value": "https://cp-tar-pp-ag.vimpelcom.ru"
+		},
+		{
+			"key": "HostEtl",
+			"value": "https://cp-tar-pp-etl.vimpelcom.ru"
+		},
+		{
+			"key": "PortProduct",
+			"value": "9444"
+		},
+		{
+			"key": "PortService",
+			"value": "9443"
+		},
+		{
+			"key": "PortPartyRole",
+			"value": "9447"
+		},
+		{
+			"key": "PortIndividual",
+			"value": "9445"
+		},
+		{
+			"key": "PortAgreement",
+			"value": "9448"
+		},
+		{
+			"key": "PortEtl",
+			"value": "9446"
+		},
+		{
+			"key": "LoginSuccess",
+			"value": "tester"
+		},
+		{
+			"key": "PasswordProduct",
+			"value": "pWpCP3VYk"
+		},
+		{
+			"key": "PasswordService",
+			"value": "w3yCYydeW"
+		},
+		{
+			"key": "PasswordIndividual",
+			"value": "6DbM3VeQ"
+		},
+		{
+			"key": "PasswordAgreement",
+			"value": "Ru8U8s6i"
+		},
+		{
+			"key": "PasswordEtl",
+			"value": "wLbqzfL6"
+		},
+		{
+			"key": "SysSuccess",
+			"value": "test"
+		},
+		{
+			"key": "TokenForIndividual",
+			"value": ""
+		},
+		{
+			"key": "TokenForProduct",
+			"value": ""
+		},
+		{
+			"key": "TokenForService",
+			"value": ""
+		},
+		{
+			"key": "TokenForPartyRole",
+			"value": ""
+		},
+		{
+			"key": "TokenForAgreement",
+			"value": ""
+		},
+		{
+			"key": "PasswordPartyRole",
+			"value": "9x7JBAcg"
+		},
+		{
+			"key": "TokenForEtl",
+			"value": ""
+		}
+	]
+}
